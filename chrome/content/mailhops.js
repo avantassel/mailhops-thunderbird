@@ -26,7 +26,7 @@ var mailHops =
 mailHops.startLoading = function()
 {
   mailHops.isLoaded = true;
-  mailHops.container = document.getElementById ( "mailhops" ) ;
+  mailHops.container = document.getElementById ( "mailhopsBox" ) ;
   mailHops.resultBox = document.getElementById ( "mailhopsResult" ) ;
   mailHops.resultImage = document.getElementById ( "mailhopsResultImage" ) ;  
   mailHops.resultText = document.getElementById ( "mailhopsResultText" ) ;
