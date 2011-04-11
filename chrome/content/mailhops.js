@@ -317,7 +317,7 @@ mailHops.lookup = function(route){
 
 function addCommas(nStr)
 {
-	var nStr += '';
+	nStr += '';
 	var x = nStr.split('.');
 	var x1 = x[0];
 	var x2 = x.length > 1 ? '.' + x[1] : '';
