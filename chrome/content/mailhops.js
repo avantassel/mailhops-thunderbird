@@ -14,7 +14,7 @@ var mailHops =
   isLoaded:     false,
   map:			'goog',
   unit:			'mi',
-  appVersion:	'MailHops Thunderbird 0.4.5'
+  appVersion:	'MailHops Thunderbird 0.4.6'
 }
 
 mailHops.startLoading = function()
@@ -26,8 +26,15 @@ mailHops.startLoading = function()
   mailHops.resultText = document.getElementById ( "mailhopsResultText" ) ;
   //get preferences
   mailHops.map = mailHops.getCharPref('mail.mailHops.map','goog');
-  mailHops.unit = mailHops.getCharPref('mail.mailHops.unit','mi');  
-} ;
+  mailHops.unit = mailHops.getCharPref('mail.mailHops.unit','mi');
+  //event listner for route click to launch map
+  mailHops.container.addEventListener("click", function () { 
+  		var route = this.getAttribute("route");
+  		if(route)
+	  		mailHops.launchMap(String(route)); 
+  	}
+  , false);  
+};
 
 mailHops.StreamListener =
 {
@@ -67,7 +74,7 @@ mailHops.StreamListener =
     mailHops.headers.initialize ( this.content , this.content.length ) ;
     mailHops.dispRoute() ;
   }
-} ;
+};
 
 /**
 *	loop through the header, find out if we have received-from headers
@@ -89,7 +96,7 @@ mailHops.loadHeaderData = function()
   var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance ( Components.interfaces.nsIMessenger ) ;
   var msgService = messenger.messageServiceFromURI ( msgURI ) ;
   msgService.CopyMessage ( msgURI , mailHops.StreamListener , false , null , msgWindow , {} ) ;
-} ;
+};
 
 mailHops.dispRoute = function()
 {
@@ -185,27 +192,23 @@ mailHops.displayResult = function ( image, distance, city, state, countryName, r
   		displayText = countryName;
     if(distance && distance.miles > 0){
     	if(mailHops.unit=='mi')
-			displayText +=' ( '+addCommas(Math.round(distance.miles))+' mi traveled )';
+			displayText +=' ( '+mailHops.addCommas(Math.round(distance.miles))+' mi traveled )';
 		else
-			displayText +=' ( '+addCommas(Math.round(distance.kilometers))+' km traveled )';
+			displayText +=' ( '+mailHops.addCommas(Math.round(distance.kilometers))+' km traveled )';
 	}
 	else if(displayText=='')
 		displayText = ' Local message.';	
   } 
   //add event for route api map
-  	if(route)
-		mailHops.container.setAttribute("onclick","launchMap('"+route.toString()+"');");
-	else
-		mailHops.container.removeAttribute("onclick");
-   
+  mailHops.container.setAttribute("route",route);
   mailHops.resultText.textContent = displayText;
   mailHops.resultImage.src=image; 
-} ;
+};
 
 mailHops.clearRoute = function(){
 	mailHops.resultImage.src='chrome://mailhops/content/images/loader.gif';
 	mailHops.resultText.textContent = ' Looking Up Route'; 
-} ;
+};
 
 mailHops.setupEventListener = function()
 {
@@ -220,7 +223,7 @@ mailHops.setupEventListener = function()
   listener.onStartHeaders = function() { mailHops.clearRoute() ; } ;
   listener.onEndHeaders = mailHops.loadHeaderData ;
   gMessageListeners.push ( listener ) ;
-} ;
+};
 
 //preferences observers
 mailHops.registerObserver = function()
@@ -229,7 +232,7 @@ mailHops.registerObserver = function()
   mailHops._branch = prefService.getBranch ( "mail.mailHops." ) ;
   mailHops._branch.QueryInterface ( Components.interfaces.nsIPrefBranchInternal ) ;
   mailHops._branch.addObserver ( "" , mailHops , false ) ;
-} ;
+};
 
 mailHops.unregisterObserver = function()
 {
@@ -238,7 +241,7 @@ mailHops.unregisterObserver = function()
   }
 
   mailHops._branch.removeObserver ( "" , mailHops ) ;
-} ;
+};
 
 mailHops.observe = function ( aSubject , aTopic , aData )
 {
@@ -247,7 +250,7 @@ mailHops.observe = function ( aSubject , aTopic , aData )
   }
 
   mailHops.startLoading();
-} ;
+};
 
 mailHops.getCharPref = function ( strName , strDefault )
 {
@@ -263,7 +266,7 @@ mailHops.getCharPref = function ( strName , strDefault )
   }
 
   return ( value ) ;
-} ;
+};
 
 //mailhops lookup
 mailHops.lookup = function(route){
@@ -312,7 +315,7 @@ mailHops.lookup = function(route){
 
 };
 
-function addCommas(nStr)
+mailHops.addCommas = function(nStr)
 {
 	nStr += '';
 	var x = nStr.split('.');
@@ -323,13 +326,13 @@ function addCommas(nStr)
 		x1 = x1.replace(rgx, '$1' + ',' + '$2');
 	}
 	return x1 + x2;
-}
+};
 
-function launchMap(route)
+mailHops.launchMap = function(route)
 {
 	//launch mailhops api map
 	var openwin = window.openDialog('http://api.mailhops.com/v1/map/?tb&app='+mailHops.appVersion+'&m='+mailHops.map+'&u='+mailHops.unit+'&r='+route,"MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=730,height=330');
 	openwin.focus();
-}
+};
 
 addEventListener ( "messagepane-loaded" , mailHops.setupEventListener , true ) ;
