@@ -7,14 +7,15 @@
 
 var mailHops =
 {
-  resultBox:	null,
-  resultImage:	null,
-  resultText:	null,
-  container:	null,
-  isLoaded:     false,
-  map:			'goog',
-  unit:			'mi',
-  appVersion:	'MailHops Thunderbird 0.5'
+  resultBox:		null,
+  resultImage:		null,
+  resultText:		null,
+  resultDetails:	null,
+  container:		null,
+  isLoaded:     	false,
+  map:				'goog',
+  unit:				'mi',
+  appVersion:		'MailHops Thunderbird 0.5.1'
 }
 
 mailHops.startLoading = function()
@@ -24,12 +25,14 @@ mailHops.startLoading = function()
   mailHops.resultBox = document.getElementById ( "mailhopsResult" ) ;
   mailHops.resultImage = document.getElementById ( "mailhopsResultImage" ) ;  
   mailHops.resultText = document.getElementById ( "mailhopsResultText" ) ;
+  mailHops.resultDetails = document.getElementById ( "mailhopsDataPaneDetails");
+  
   //get preferences
   mailHops.map = mailHops.getCharPref('mail.mailHops.map','goog');
   mailHops.unit = mailHops.getCharPref('mail.mailHops.unit','mi');
   //event listner for route click to launch map
-  mailHops.container.addEventListener("click", function () { 
-  		var route = this.getAttribute("route");
+  mailHops.resultImage.addEventListener("click", function () { 
+  		var route = this.getAttribute("data-route");
   		if(route)
 	  		mailHops.launchMap(String(route)); 
   	}
@@ -112,7 +115,7 @@ var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{
 	if(headXOrigIP){
 		var ip = headXOrigIP.match(regexAllIp);
 		if(ip != null && ip.length != 0)
-			all_ips.push( ip[0] );
+			all_ips.unshift( ip[0] );
 	}
   //loop through the received headers and parse for IP addresses	
   if ( headReceived ){
@@ -129,7 +132,7 @@ var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{
 	      		for( var r=0; r<received_ips.length; r++ ){	      			
 	      			//only look at the first IP
 	      			if(regexIp.test(received_ips[r]) && all_ips.indexOf(received_ips[r])==-1 && mailHops.testIP(received_ips[r],rline)){
-						all_ips.push( received_ips[r] );
+						all_ips.unshift( received_ips[r] );
 						break;		    	    
 		    	}
 		   	}
@@ -142,7 +145,7 @@ var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{
   if ( all_ips.length != 0 ){
    mailHops.lookup ( all_ips ) ;
   } else {
-	  mailHops.displayResult('chrome://mailhops/content/images/local.png',null,null,null,null,null);
+	  mailHops.displayResult();
   }
 };
 //another ip check, dates will throw off the regex
@@ -175,14 +178,77 @@ mailHops.testIP = function(ip,header){
 	
 };
 
-mailHops.displayResult = function ( image, distance, city, state, countryName, route )
-{
+mailHops.displayResult = function ( header_route, response ){
   var displayText='';
-  		
-  if(image.indexOf('error')!=-1) {
-  	displayText = ' There was a problem connecting to MailHops.'; 
-  }
-  else if(image.indexOf('local')!=-1) {
+  var distanceText='';
+  var image='chrome://mailhops/content/images/local.png';
+  var city;
+  var state;
+  var countryName;
+  var gotFirst=false;
+
+  //remove child details
+	while(mailHops.resultDetails.firstChild) {
+    	mailHops.resultDetails.removeChild(mailHops.resultDetails.firstChild);
+	}
+
+  if(response){
+  	
+   		for(var i=0; i<response.route.length;i++){
+  			//get the first hop location
+	   		if(!gotFirst && !response.route[i].private && !response.route[i].client){
+	   			if(response.route[i].countryCode)
+		   			image='chrome://mailhops/content/images/flags/'+response.route[i].countryCode.toLowerCase()+'.png';
+		   		if(response.route[i].city)
+		   			city=response.route[i].city;
+		   		if(response.route[i].state)
+		   			state=response.route[i].state;
+		   		if(response.route[i].countryName)
+		   			countryName=response.route[i].countryName;
+	   			gotFirst=true;
+	   		}
+	   		
+	   		var menuitem = document.createElement('menuitem');
+	   		var label='';
+	   		
+	   		menuitem.setAttribute('class','menuitem-iconic');
+	   		
+	   		if(response.route[i].countryCode)
+		   		menuitem.setAttribute('image','chrome://mailhops/content/images/flags/'+response.route[i].countryCode.toLowerCase()+'.png');
+		   	else
+		   		menuitem.setAttribute('image','chrome://mailhops/content/images/local.png');
+		   	
+		   	if(response.route[i].city && response.route[i].state){
+			   	label='Hop #'+(i+1)+' '+response.route[i].city+', '+response.route[i].state;
+			   	menuitem.setAttribute('oncommand','mailHops.launchWhoIs("'+response.route[i].ip+'");');
+			   	menuitem.setAttribute('tooltiptext','Click for WhoIs');
+			}
+			else if(response.route[i].countryName){
+				label='Hop #'+(i+1)+' '+response.route[i].countryName;
+				menuitem.setAttribute('oncommand','mailHops.launchWhoIs("'+response.route[i].ip+'");');
+				menuitem.setAttribute('tooltiptext','Click for WhoIs');
+			}
+			else 
+				label='Hop #'+(i+1)+' Private';	
+			
+			label+=' '+response.route[i].ip;
+			
+			if(response.route[i].host)
+			   	label+=' '+response.route[i].host;
+			if(response.route[i].whois && response.route[i].whois.descr)
+			   	label+=' '+response.route[i].whois.descr;
+			if(response.route[i].whois && response.route[i].whois.netname)
+			   	label+=' '+response.route[i].whois.netname;
+			   	
+			menuitem.setAttribute('label',label);
+			
+			//append details
+	   		mailHops.resultDetails.appendChild(menuitem);
+	   		
+	   		}
+ 		}
+ 		
+  if(image.indexOf('local')!=-1) {
   	displayText = ' Local message.';
   }				
   else {
@@ -190,21 +256,62 @@ mailHops.displayResult = function ( image, distance, city, state, countryName, r
 		displayText = city+', '+state;
 	else if(countryName)
   		displayText = countryName;
-    if(distance && distance.miles > 0){
+    if(response.distance && response.distance.miles > 0){
     	if(mailHops.unit=='mi')
-			displayText +=' ( '+mailHops.addCommas(Math.round(distance.miles))+' mi traveled )';
+			distanceText =' ( '+mailHops.addCommas(Math.round(response.distance.miles))+' mi traveled )';
 		else
-			displayText +=' ( '+mailHops.addCommas(Math.round(distance.kilometers))+' km traveled )';
+			distanceText =' ( '+mailHops.addCommas(Math.round(response.distance.kilometers))+' km traveled )';
 	}
 	else if(displayText=='')
 		displayText = ' Local message.';	
   } 
-  //add event for route api map
-  mailHops.container.setAttribute("route",route);
-  mailHops.resultText.textContent = displayText;
-  mailHops.resultImage.src=image; 
+    	   	
+  if(header_route)  	
+  	mailHops.resultImage.setAttribute("data-route", header_route);
+  else
+	mailHops.resultImage.removeAttribute("data-route");
+
+  mailHops.resultText.textContent = displayText+' '+distanceText;
+  mailHops.resultImage.src=image;		
+    
 };
 
+mailHops.ShowDetails = function(){
+	if(mailHops.resultDetails.parent().style.display == 'block')
+		mailHops.resultDetails.parent().style.display = 'block';
+	else
+		mailHops.resultDetails.parent().style.display = 'none';
+};
+	 
+mailHops.displayError = function(data){
+	  mailHops.container.removeAttribute("route");
+	  if(data && data.meta.code==410)
+	  	mailHops.resultImage.src = 'url(chrome://mailhops/content/images/info.png)';
+	  else
+	  	mailHops.resultImage.src = 'url(chrome://mailhops/content/images/auth/error.png)';
+	  
+	  if(data && data.error){
+	  	mailHops.resultText.textContent = mailHops.getErrorTitle(data.meta.code);	  
+	  	mailHops.resultImage.setAttribute('tooltiptext',data.error.message); 
+	  }else{
+	  	mailHops.resultText.textContent = ' Service Unavailable.';	  
+	  	mailHops.resultImage.setAttribute('tooltiptext',' Could not connect to MailHops.'); 
+	  }
+};
+
+mailHops.getErrorTitle = function(error_code){
+	switch(error_code){
+   		case 400:
+   			return 'Missing route parameter';
+   		case 410:
+   			return 'Down for Maintenance';
+   		case 500:
+   			return 'Server Error';
+   		default:
+   			return 'Service Unavailable';
+   	}
+};
+ 		
 mailHops.clearRoute = function(){
 	mailHops.resultImage.src='chrome://mailhops/content/images/loader.gif';
 	mailHops.resultText.textContent = ' Looking Up Route'; 
@@ -269,7 +376,7 @@ mailHops.getCharPref = function ( strName , strDefault )
 };
 
 //mailhops lookup
-mailHops.lookup = function(route){
+mailHops.lookup = function(header_route){
 
  //setup loading
  mailHops.clearRoute();
@@ -278,36 +385,23 @@ mailHops.lookup = function(route){
  var nativeJSON = Components.classes["@mozilla.org/dom/json;1"].createInstance(Components.interfaces.nsIJSON);
  //call mailhops api for lookup	
  var xmlhttp = new XMLHttpRequest();
- var flag= 'chrome://mailhops/content/images/local.png';
- var city;
- var state;
- var countryName;
  
- xmlhttp.open("GET", 'http://api.mailhops.com/v1/lookup/?tb&app='+mailHops.appVersion+'&r='+route.toString(),true);
+ xmlhttp.open("GET", 'http://api.mailhops.com/v1/lookup/?tb&app='+mailHops.appVersion+'&r='+String(header_route),true);
  xmlhttp.onreadystatechange=function() {
   if (xmlhttp.readyState==4) {
   try{
-	   var data = nativeJSON.decode(xmlhttp.responseText);
+  	   var data = JSON.parse(xmlhttp.responseText);
 	   if(data && data.meta.code==200){
-	   	for(var i=0; i<data.response.route.length;i++){
-	   		if(!data.response.route[i].private && !data.response.route[i].client){
-	   			if(data.response.route[i].countryCode)
-		   			flag='chrome://mailhops/content/images/flags/'+data.response.route[i].countryCode.toLowerCase()+'.png';
-	   			city=data.response.route[i].city;
-	   			state=data.response.route[i].state;
-	   			countryName=data.response.route[i].countryName;
-	   			break;
-	   		}   			
-	   	}
-	   	//display the result
-	   	mailHops.displayResult(flag,data.response.distance,city,state,countryName,route);
+	   		//display the result
+	   		mailHops.displayResult(header_route,data.response);
 	   } else {
-	    //display the error
-	   	mailHops.displayResult('chrome://mailhops/content/images/error.png',null,null,null,null,null);
+	    	//display the error
+	   		mailHops.displayError(data);
 	   }
    }
-   catch (ex){ 
-	   mailHops.displayResult('chrome://mailhops/content/images/error.png',null,null,null,null,null);
+   catch (e){ 
+
+	   mailHops.displayError();
    }
   }
  };
@@ -327,11 +421,15 @@ mailHops.addCommas = function(nStr)
 	}
 	return x1 + x2;
 };
-
+mailHops.launchWhoIs = function(ip){
+	var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+	messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+	messenger.launchExternalURL('http://www.mailhops.com/whois/'+ip);
+};
 mailHops.launchMap = function(route)
 {
 	//launch mailhops api map
-	var openwin = window.openDialog('http://api.mailhops.com/v1/map/?tb&app='+mailHops.appVersion+'&m='+mailHops.map+'&u='+mailHops.unit+'&r='+route,"MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=730,height=330');
+	var openwin = window.openDialog('http://api.mailhops.com/v1/map/?tb&app='+mailHops.appVersion+'&m='+mailHops.map+'&u='+mailHops.unit+'&r='+route,"MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=732,height=332');
 	openwin.focus();
 };
 
