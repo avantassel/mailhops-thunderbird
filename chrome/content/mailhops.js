@@ -15,7 +15,7 @@ var mailHops =
   isLoaded:     	false,
   map:				'goog',
   unit:				'mi',
-  appVersion:		'MailHops Thunderbird 0.5.1'
+  appVersion:		'MailHops Thunderbird 0.6'
 }
 
 mailHops.startLoading = function()
