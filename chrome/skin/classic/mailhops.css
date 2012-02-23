@@ -1,7 +1,13 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
-#mailhopsBox {cursor:pointer;}
+#mailhopsBox { height: 16px;}
 
-#mailhopsResultText {padding-left:4px;}
+#mailhopsLabel { padding-right: 6px; }
 
-#mailHopsResultImage {padding-left:4px;display: none;}
+#mailhopsResultText { padding-left:6px; cursor:pointer; }
+
+#mailHopsResultImage { display: none; }
+
+menuitem .menu-iconic-icon { width: 16px; height: 11px; }
+
+#mailhopsResult .result-iconic { padding-top: 2px; padding-bottom: 2px; width: 16px; cursor:pointer; }
