@@ -15,7 +15,7 @@ var mailHops =
   isLoaded:     	false,
   map:				'goog',
   unit:				'mi',
-  appVersion:		'MailHops Thunderbird 0.6'
+  appVersion:		'MailHops Thunderbird 0.6.1'
 }
 
 mailHops.startLoading = function()
@@ -150,32 +150,28 @@ var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{
 };
 //another ip check, dates will throw off the regex
 mailHops.testIP = function(ip,header){
-
-	var retval;
+	var retval=true;
 	try
 	{
-		if(header.indexOf(ip) == -1)
-			retval = true;
 		var firstchar = header.substring(header.indexOf(ip)-1);
 			firstchar = firstchar.substring(0,1);	
 		var lastchar = header.substring((header.indexOf(ip)+ip.length));
 			lastchar = lastchar.substring(0,1);
-		if(firstchar == '[' && lastchar == ']')
-			retval = true;
-		else if(firstchar == '(' && lastchar == ')')
-			retval = true;
-		else if(firstchar.match(/\.|\d|\-/))
-			retval = null;
-		else if(lastchar.match(/\.|\d|\-/))
+		
+		if(firstchar.match(/\.|\d|\-/))
 			retval = null;		
-		else
+		else if(lastchar.match(/\.|\d|\-/))
+			retval = null;
+					
+		if(header.indexOf('['+ip+']') != -1)
 			retval = true;
+		else if(header.indexOf('('+ip+')') != -1)
+			retval = true;		
 	}
 	catch(ex) {
 		retval = true;
-	}
-	return retval;
-	
+	}	
+	return retval;	
 };
 
 mailHops.displayResult = function ( header_route, response ){
