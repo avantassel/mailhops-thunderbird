@@ -559,6 +559,9 @@ mailHops.getErrorTitle = function(error_code){
 };
  		
 mailHops.clearRoute = function(){
+	
+	mailHops.mailhopsDataPaneDNSBL.style.display = 'none';
+	
 	mailHops.resultText.style.backgroundImage='url(chrome://mailhops/content/images/loader.gif)';
 	mailHops.resultText.setAttribute('value',' Looking Up Route'); 
 };
