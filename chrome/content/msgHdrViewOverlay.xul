@@ -10,13 +10,27 @@
 
 	<rows id="expandedHeader2Rows">
 		<row id="mailhopsBox" collapsed="false">
-			<label id="mailhopsLabel" value="route " class="headerName"/>
-               		<hbox id="mailhopsResult" flex="2">
-               			<image id="mailhopsResultImage" tooltiptext="Click to view the travel map of this message." class="result-iconic"/>
-               			<hbox id="mailhopsResultText" context="mailhopsDataPaneDetails" tooltiptext="Right click to view route."></hbox>
-               		</hbox>
-               		<menupopup id="mailhopsDataPaneDetails">						
+			<label id="mailhopsLabel" value="Route " class="headerName"></label>
+       		<hbox id="mailhopsResult" flex="1">
+       			<label id="mailhopsResultText"></label>
+       			
+       			<button type="menu" class="msgHeaderView-button msgHeaderView-flat-button" label="hops" tooltiptext="Click to view route.">
+       				<menupopup id="mailhopsDataPaneDetails">						
 					</menupopup>
+				</button>	
+				
+				<label id="mailhopsMapLink" class="text-link" value="map" tooltiptext="Click to view the travel map of this message."></label>
+				
+				<label id="mailhopsDataPaneMailer" class="auth-item" value="" tooltiptext="Mailer"></label>
+				
+				<label id="mailhopsDataPaneSPF" class="auth-item" value="" tooltiptext="SPF"></label>
+				
+				<label id="mailhopsDataPaneDKIM" class="auth-item" value="" tooltiptext="DKIM"></label>
+				
+				<label id="mailhopsDataPaneDNSBL" class="text-link auth-item" value="" tooltiptext="DNSBL"></label>
+									
+       		</hbox>
+               		
 		</row>
 	</rows>
 		

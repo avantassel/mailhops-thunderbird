@@ -8,14 +8,18 @@
 var mailHops =
 {
   resultBox:		null,
-  resultImage:		null,
   resultText:		null,
   resultDetails:	null,
   container:		null,
+  mapLink:		null,
+  mailhopsDataPaneSPF:		null,
+  mailhopsDataPaneDKIM:		null,
+  mailhopsDataPaneMailer:	null,
+  mailhopsDataPaneDNSBL:	null,
   isLoaded:     	false,
   map:				'goog',
   unit:				'mi',
-  appVersion:		'MailHops Thunderbird 0.6.2'
+  appVersion:		'MailHops Thunderbird 0.6.3'
 }
 
 mailHops.startLoading = function()
@@ -23,18 +27,29 @@ mailHops.startLoading = function()
   mailHops.isLoaded = true;
   mailHops.container = document.getElementById ( "mailhopsBox" ) ;
   mailHops.resultBox = document.getElementById ( "mailhopsResult" ) ;
-  mailHops.resultImage = document.getElementById ( "mailhopsResultImage" ) ;  
   mailHops.resultText = document.getElementById ( "mailhopsResultText" ) ;
   mailHops.resultDetails = document.getElementById ( "mailhopsDataPaneDetails");
+  mailHops.mapLink = document.getElementById ( "mailhopsMapLink");
+  //auth
+  mailHops.mailhopsDataPaneSPF = document.getElementById ( "mailhopsDataPaneSPF");   
+  mailHops.mailhopsDataPaneDKIM = document.getElementById ( "mailhopsDataPaneDKIM");    
+  mailHops.mailhopsDataPaneMailer = document.getElementById ( "mailhopsDataPaneMailer");    
+  mailHops.mailhopsDataPaneDNSBL = document.getElementById ( "mailhopsDataPaneDNSBL");      
   
   //get preferences
   mailHops.map = mailHops.getCharPref('mail.mailHops.map','goog');
   mailHops.unit = mailHops.getCharPref('mail.mailHops.unit','mi');
   //event listner for route click to launch map
-  mailHops.resultImage.addEventListener("click", function () { 
+  mailHops.mapLink.addEventListener("click", function () { 
   		var route = this.getAttribute("data-route");
   		if(route)
 	  		mailHops.launchMap(String(route)); 
+  	}
+  , false);
+  
+   mailHops.mailhopsDataPaneDNSBL.addEventListener("click", function () { 
+  		var ip = this.getAttribute('data-ip');
+  		mailHops.launchSpamHausURL(ip);
   	}
   , false);  
 };
@@ -108,6 +123,16 @@ var regexIp=/(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|
 var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)(\/(?:[012]\d?|3[012]?|[456789])){0,1}/g;
   var headReceived = mailHops.headers.extractHeader ( "Received" , true ) ;
   var headXOrigIP = mailHops.headers.extractHeader ( "X-Originating-IP" , false ) ;
+  
+  var headXMailer = mailHops.headers.extractHeader ( "X-Mailer" , false ) ;
+  var headUserAgent = mailHops.headers.extractHeader ( "User-Agent" , false ) ;
+  var headXMimeOLE = mailHops.headers.extractHeader ( "X-MimeOLE" , false ) ;
+  var headReceivedSPF = mailHops.headers.extractHeader ( "Received-SPF" , false ) ;
+  var headAuth = mailHops.headers.extractHeader ( "Authentication-Results" , false ) ;
+  
+  //display auth
+  mailHops.displayResultAuth(headXMailer,headUserAgent,headXMimeOLE,headAuth,headReceivedSPF);
+    
   var received_ips;
   var all_ips = new Array();
   var rline='';
@@ -126,12 +151,12 @@ var regexAllIp = /(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{
 	      	if(received_ips != null && received_ips.length !=0){
 	      		for( var r=0; r<received_ips.length; r++ ){	      			
 	      			//only look at the first IP
-	      			if(regexIp.test(received_ips[r]) && all_ips.indexOf(received_ips[r])==-1 && mailHops.testIP(received_ips[r],rline)){
+	      			if(regexIp.test(received_ips[r]) && mailHops.testIP(received_ips[r],rline)){
 						all_ips.unshift( received_ips[r] );
 						break;		    	    
-		    	}
-		   	}
-	      }
+		    		}
+		   		}
+	      	}
 	      //reset the line
 	      rline='';
       }
@@ -173,6 +198,216 @@ mailHops.testIP = function(ip,header){
 		retval = true;
 	}	
 	return retval;	
+};
+
+mailHops.displayResultAuth = function( header_xmailer, header_useragent, header_xmimeole, header_auth, header_spf ){
+
+	//SPF
+	if(header_spf){
+		header_spf=header_spf.replace(/^\s+/,"");
+		var headerSPFArr=header_spf.split(' ');
+		mailHops.mailhopsDataPaneSPF.setAttribute('value','SPF: '+headerSPFArr[0]);
+		mailHops.mailhopsDataPaneSPF.style.backgroundImage = 'url(chrome://mailhops/content/images/auth/'+headerSPFArr[0]+'.png)';
+		mailHops.mailhopsDataPaneSPF.setAttribute('tooltiptext',header_spf+'\n'+mailHops.authExplainSPF(headerSPFArr[0]));   
+		mailHops.mailhopsDataPaneSPF.style.display='block';
+	}
+	else{
+		mailHops.mailhopsDataPaneSPF.style.display='none';
+	}
+	//Authentication-Results
+	//http://tools.ietf.org/html/rfc5451
+	if(header_auth){
+		var headerAuthArr=header_auth.split(';');
+		var dkim_result;
+		var spf_result;
+		for(var h=0;h<headerAuthArr.length;h++){
+			if(headerAuthArr[h].indexOf('dkim=')!=-1){
+				dkim_result = headerAuthArr[h];
+				if(header_spf)
+					break;				
+			}
+			if(!header_spf && headerAuthArr[h].indexOf('spf=')!=-1){
+				spf_result = headerAuthArr[h];
+				if(dkim_result)
+					break;				
+			}
+		}		
+		if(dkim_result){
+			dkim_result=dkim_result.replace(/^\s+/,"");
+			var dkimArr=dkim_result.split(' ');
+			mailHops.mailhopsDataPaneDKIM.setAttribute('value','DKIM: '+dkimArr[0].replace('dkim=',''));
+			mailHops.mailhopsDataPaneDKIM.style.backgroundImage = 'url(chrome://mailhops/content/images/auth/'+dkimArr[0].replace('dkim=','')+'.png)';
+			mailHops.mailhopsDataPaneDKIM.setAttribute('tooltiptext',dkim_result+'\n'+mailHops.authExplainDKIM(dkimArr[0].replace('dkim=','')));   
+			mailHops.mailhopsDataPaneDKIM.style.display='block';
+		}
+		else{
+			mailHops.mailhopsDataPaneDKIM.style.display='none';
+		}
+		if(spf_result){
+			spf_result=spf_result.replace(/^\s+/,"");
+			var spfArr=spf_result.split(' ');
+			mailHops.mailhopsDataPaneSPF.setAttribute('value','SPF: '+spfArr[0].replace('spf=',''));
+			mailHops.mailhopsDataPaneSPF.style.backgroundImage = 'url(chrome://mailhops/content/images/auth/'+spfArr[0].replace('spf=','')+'.png)';
+			mailHops.mailhopsDataPaneSPF.setAttribute('tooltiptext',spf_result+'\n'+mailHops.authExplainSPF(spfArr[0].replace('spf=','')));   
+			mailHops.mailhopsDataPaneSPF.style.display='block';
+		}
+	}
+	else{
+		mailHops.mailhopsDataPaneDKIM.style.display='none';
+	}
+	//X-Mailer, User-Agent or X-MimeOLE
+	if(header_xmailer){
+		mailHops.mailhopsDataPaneMailer.style.backgroundImage = 'url(chrome://mailhops/content/images/email.png)';
+		if(header_xmailer.indexOf('(')!=-1)
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_xmailer.substring(0,header_xmailer.indexOf('(')));
+		else if(header_xmailer.indexOf('[')!=-1)
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_xmailer.substring(0,header_xmailer.indexOf('[')));
+		else
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_xmailer);
+		mailHops.mailhopsDataPaneMailer.setAttribute('tooltiptext',header_xmailer);   
+		mailHops.mailhopsDataPaneMailer.style.display='block';
+	} else if(header_useragent){
+		mailHops.mailhopsDataPaneMailer.style.backgroundImage = 'url(chrome://mailhops/content/images/email.png)';
+		if(header_useragent.indexOf('(')!=-1)
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_useragent.substring(0,header_useragent.indexOf('(')));
+		else if(header_useragent.indexOf('[')!=-1)
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_useragent.substring(0,header_useragent.indexOf('[')));
+		else
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_useragent);		
+		mailHops.mailhopsDataPaneMailer.setAttribute('tooltiptext',header_useragent); 
+		mailHops.mailhopsDataPaneMailer.style.display='block';
+	}
+	else if(header_xmimeole){
+		mailHops.mailhopsDataPaneMailer.style.backgroundImage = 'url(chrome://mailhops/content/images/email.png)';
+		
+		if(header_xmimeole.indexOf('(')!=-1)
+			header_xmimeole = header_xmimeole.substring(0,header_xmimeole.indexOf('('));
+		else if(header_xmimeole.indexOf('[')!=-1)
+			header_xmimeole = header_xmimeole.substring(0,header_xmimeole.indexOf('['));
+		
+		if(header_xmimeole.indexOf('Produced By ')!=-1)
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_xmimeole.replace('Produced By ',''));		
+		else
+			mailHops.mailhopsDataPaneMailer.setAttribute('value',header_xmimeole);		
+		
+		mailHops.mailhopsDataPaneMailer.setAttribute('tooltiptext',header_xmimeole); 
+		mailHops.mailhopsDataPaneMailer.style.display='block';
+	}	
+	else {
+		mailHops.mailhopsDataPaneMailer.style.display='none';
+	}
+
+};
+
+mailHops.authExplainDKIM = function(result){
+
+switch(result){
+
+   case 'none':
+   		return 'The message was not signed.';
+
+   case 'pass':  
+   		return 'The message was signed, the signature or signatures were acceptable to the verifier, and the signature(s) passed verification tests.';
+
+   case 'fail':  
+   		return 'The message was signed and the signature or signatures were acceptable to the verifier, but they failed the verification test(s).';
+
+   case 'policy':  
+   		return 'The message was signed but the signature or signatures were not acceptable to the verifier.';
+
+   case 'neutral':  
+   		return 'The message was signed but the signature or signatures contained syntax errors or were not otherwise able to be processed.  This result SHOULD also be used for other failures not covered elsewhere in this list.';
+
+   case 'temperror':  
+   		return 'The message could not be verified due to some error that is likely transient in nature, such as a temporary inability to retrieve a public key.  A later attempt may produce a final result.';
+
+   case 'permerror':  
+   		return 'The message could not be verified due to some error that is unrecoverable, such as a required header field being absent.  A later attempt is unlikely to produce a final result.';
+      
+     default:
+     	return '';
+   }
+      
+};
+
+mailHops.authExplainSPF = function(result){
+
+switch(result){
+
+   case 'none':
+		return 'No policy records were published at the sender\'s DNS domain.';
+
+   case 'neutral':  
+   		return 'The sender\'s ADMD has asserted that it cannot or does not want to assert whether or not the sending IP address is authorized to send mail using the sender\'s DNS domain.';
+
+   case 'pass':  
+   		return 'The client is authorized by the sender\'s ADMD to inject or relay mail on behalf of the sender\'s DNS domain.';
+
+   case 'policy':  
+   		return 'The client is authorized to inject or relay mail on behalf of the sender\'s DNS domain according to the authentication method\'s algorithm, but local policy dictates that the result is unacceptable.'
+
+   case 'hardfail':  
+   		return 'This client is explicitly not authorized to inject or relay mail using the sender\'s DNS domain.';
+
+   case 'softfail':  
+   		return 'The sender\'s ADMD believes the client was not authorized to inject or relay mail using the sender\'s DNS domain, but is unwilling to make a strong assertion to that effect.';
+
+   case 'temperror':  
+   		return 'The message could not be verified due to some error that is likely transient in nature, such as a temporary inability to retrieve a policy record from DNS.  A later attempt may produce a final result.';
+
+   case 'permerror':  
+   		return 'The message could not be verified due to some error that is unrecoverable, such as a required header field being absent or a syntax error in a retrieved DNS TXT record.  A later attempt is unlikely to produce a final result.';
+      
+    default:
+     	return '';
+   }
+      
+};
+
+mailHops.authExplainDNSBL = function(result){
+
+	switch(result){
+
+   		case '127.0.0.2':
+   		case '127.0.0.3':
+			return 'Static UBE sources, verified spam services and ROKSO spammers.';
+		
+		case '127.0.0.4':
+		case '127.0.0.5':
+		case '127.0.0.6':
+		case '127.0.0.7':
+			return 'Illegal 3rd party exploits, including proxies, worms and trojan exploits.';
+		
+		case '127.0.0.10':
+		case '127.0.0.11':
+			return 'IP ranges which should not be delivering unauthenticated SMTP email.';
+			
+		default:
+			return '';
+	}
+};
+
+mailHops.authExplainDNSBL_server = function(result){
+
+	switch(result){
+
+   		case '127.0.0.2':
+   		case '127.0.0.3':
+			return 'SBL';
+		
+		case '127.0.0.4':
+		case '127.0.0.5':
+		case '127.0.0.6':
+		case '127.0.0.7':
+			return 'XBL';
+		
+		case '127.0.0.10':
+		case '127.0.0.11':
+			return 'PBL';
+			
+		default:
+			return '';
+	}
 };
 
 mailHops.displayResult = function ( header_route, response ){
@@ -242,6 +477,17 @@ mailHops.displayResult = function ( header_route, response ){
 			//append details
 	   		mailHops.resultDetails.appendChild(menuitem);
 	   		
+	   		//auth & dnsbl
+			if(!response.route[i].private && response.route[i].dnsbl && response.route[i].dnsbl.listed){
+				mailHops.mailhopsDataPaneDNSBL.setAttribute('value','Blacklisted '+mailHops.authExplainDNSBL_server(response.route[i].dnsbl.record));
+				mailHops.mailhopsDataPaneDNSBL.setAttribute('data-ip',response.route[i].ip);
+				if(response.route[i].dnsbl.record)
+					mailHops.mailhopsDataPaneDNSBL.setAttribute('tooltiptext','Click for more details.\n'+mailHops.authExplainDNSBL(response.route[i].dnsbl.record));
+				else
+					mailHops.mailhopsDataPaneDNSBL.setAttribute('tooltiptext','Click for more details.');
+				mailHops.mailhopsDataPaneDNSBL.style.backgroundImage = 'url(chrome://mailhops/content/images/auth/bomb.png)';
+				mailHops.mailhopsDataPaneDNSBL.style.display = 'block';
+			}
 	   		}
  		}
  		
@@ -263,14 +509,17 @@ mailHops.displayResult = function ( header_route, response ){
 		displayText = ' Local message.';	
   } 
     	   	
-  if(header_route)  	
-  	mailHops.resultImage.setAttribute("data-route", header_route);
-  else
-	mailHops.resultImage.removeAttribute("data-route");
-
-  mailHops.resultText.textContent = displayText+' '+distanceText;
-  mailHops.resultImage.src=image;		
-    
+  if(header_route){  	
+  	mailHops.mapLink.setAttribute("data-route", header_route);
+  	mailHops.mapLink.style.display='inline';
+  	}
+  else{
+	mailHops.mapLink.style.display='none';
+	}
+	
+	mailHops.resultText.setAttribute('value', displayText+' '+distanceText);
+  	mailHops.resultText.style.backgroundImage = 'url('+image+')';
+  
 };
 
 mailHops.ShowDetails = function(){
@@ -283,16 +532,16 @@ mailHops.ShowDetails = function(){
 mailHops.displayError = function(data){
 	  mailHops.container.removeAttribute("route");
 	  if(data && data.meta.code==410)
-	  	mailHops.resultImage.src = 'url(chrome://mailhops/content/images/info.png)';
+	  	mailHops.resultText.style.backgroundImage = 'url(chrome://mailhops/content/images/info.png)';
 	  else
-	  	mailHops.resultImage.src = 'url(chrome://mailhops/content/images/auth/error.png)';
+	  	mailHops.resultText.style.backgroundImage = 'url(chrome://mailhops/content/images/auth/error.png)';
 	  
 	  if(data && data.error){
-	  	mailHops.resultText.textContent = mailHops.getErrorTitle(data.meta.code);	  
-	  	mailHops.resultImage.setAttribute('tooltiptext',data.error.message); 
+	  	mailHops.resultText.setAttribute('value', mailHops.getErrorTitle(data.meta.code));	  
+	  	mailHops.resultText.setAttribute('tooltiptext',data.error.message); 
 	  }else{
-	  	mailHops.resultText.textContent = ' Service Unavailable.';	  
-	  	mailHops.resultImage.setAttribute('tooltiptext',' Could not connect to MailHops.'); 
+	  	mailHops.resultText.setAttribute('value', ' Service Unavailable.');	  
+	  	mailHops.resultText.setAttribute('tooltiptext',' Could not connect to MailHops.'); 
 	  }
 };
 
@@ -310,8 +559,8 @@ mailHops.getErrorTitle = function(error_code){
 };
  		
 mailHops.clearRoute = function(){
-	mailHops.resultImage.src='chrome://mailhops/content/images/loader.gif';
-	mailHops.resultText.textContent = ' Looking Up Route'; 
+	mailHops.resultText.style.backgroundImage='url(chrome://mailhops/content/images/loader.gif)';
+	mailHops.resultText.setAttribute('value',' Looking Up Route'); 
 };
 
 mailHops.setupEventListener = function()
@@ -422,6 +671,11 @@ mailHops.launchWhoIs = function(ip){
 	var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
 	messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
 	messenger.launchExternalURL('http://www.mailhops.com/whois/'+ip);
+};
+mailHops.launchSpamHausURL = function(ip){
+	var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+	messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+	messenger.launchExternalURL('http://www.spamhaus.org/query/bl?ip='+ip);
 };
 mailHops.launchMap = function(route)
 {
