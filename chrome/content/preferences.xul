@@ -16,8 +16,7 @@
 	<vbox width="400px">
 	<tabbox id="mhTabs" selectedIndex="0">
 	  <tabs>
-	    <tab label="Defaults"/>
-	    <tab label="Display"/>
+	    <tab label="Options"/>
 	    <tab label="Hosting"/>
 	  </tabs>
 	  <tabpanels>
@@ -37,11 +36,6 @@
 				<radio value="km" label="Kilometers"/>
 			</radiogroup>
 		</groupbox>
-		
-		</tabpanel>
-		
-		<tabpanel>
-		
 		<groupbox>
 			<caption label="Display Options"/>
 			<checkbox id="mailhop.show_spf" label="Show SPF" checked="true"/>
@@ -49,7 +43,6 @@
 			<checkbox id="mailhop.show_mailer" label="Show Mailer" checked="true"/>
 			<checkbox id="mailhop.show_dnsbl" label="Show DNS Blacklist" checked="true"/>
 		</groupbox>
-		
 		</tabpanel>
 		
 		<tabpanel>
