@@ -18,13 +18,9 @@
        				<menupopup id="mailhopsDataPaneDetails">						
 					</menupopup>
 				</button>	
-				
-				<button id="mailhopsMapLink" type="menu" class="msgHeaderView-button msgHeaderView-flat-button" label="map" tooltiptext="Click to view the travel map of this message.">
-					<popupset>
-				        <panel level="top" onpopupshowing="mailHops.loadMap(event, this);">
-				            <iframe id="mailhopsMapFrame" src="" width="732" height="332"/>
-				        </panel>
-				    </popupset>
+				 
+				<button id="mailhopsMapLink" oncommand="mailHops.launchMap(event, this);" class="msgHeaderView-button msgHeaderView-flat-button" label="map" tooltiptext="Click to view the travel map of this message.">
+					
     			</button>
     			
 				<label id="mailhopsDataPaneMailer" class="auth-item" value="" tooltiptext="Mailer"></label>

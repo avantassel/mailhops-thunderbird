@@ -37,13 +37,7 @@ mailHops.startLoading = function()
   mailHops.mailhopsDataPaneDKIM = document.getElementById ( "mailhopsDataPaneDKIM");    
   mailHops.mailhopsDataPaneMailer = document.getElementById ( "mailhopsDataPaneMailer");    
   mailHops.mailhopsDataPaneDNSBL = document.getElementById ( "mailhopsDataPaneDNSBL");      
-  
-   mailHops.mapLink.addEventListener("click", function () { 
-  		if(this.hasAttribute("data-route"))
-	  		mailHops.launchMap(String(this.getAttribute("data-route"))); 
-  	}
-  , false); 
-    
+      
   //event listner for route click to launch map
   mailHops.mailhopsDataPaneDNSBL.addEventListener("click", function () { 
   		if(this.hasAttribute('data-ip'))
@@ -683,20 +677,26 @@ mailHops.addCommas = function(nStr)
 mailHops.launchWhoIs = function(ip){
 	var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
 	messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
-	messenger.launchExternalURL(encodeURIComponent('http://www.mailhops.com/whois/'+ip));
+	messenger.launchExternalURL('http://www.mailhops.com/whois/'+ip);
 };
 mailHops.launchSpamHausURL = function(ip){
 	var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
 	messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
-	messenger.launchExternalURL(encodeURIComponent('http://www.spamhaus.org/query/bl?ip='+ip));
+	messenger.launchExternalURL('http://www.spamhaus.org/query/bl?ip='+ip);
 };
-mailHops.launchMap = function(route){
-	//launch mailhops api map
-	var lookupURL=mailHops.options.api_url+'/v1/map/?pb&app='+mailHops.appVersion+'&m='+mailHops.options.map+'&u='+mailHops.options.unit+'&r='+String(route);
-	 if(mailHops.options.show_weather)
-	 	lookupURL+='&w=1';
-	var openwin = window.openDialog(encodeURIComponent(lookupURL),"MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=732,height=332');
-	openwin.focus();
+
+mailHops.launchMap = function(e,item){
+	var route =''; 
+	if(mailHops.mapLink.hasAttribute("data-route"))
+		route=mailHops.mapLink.getAttribute("data-route");
+	
+	if(route != '')	{
+		var lookupURL=mailHops.options.api_url+'/v1/map/?pb&app='+mailHops.appVersion+'&m='+mailHops.options.map+'&u='+mailHops.options.unit+'&r='+String(route);
+		 if(mailHops.options.show_weather)
+		 	lookupURL+='&w=1';
+		 	
+		window.openDialog("chrome://mailhops/content/mailhopsMap.xul","MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=742,height=385', {src: lookupURL});
+	}
 };
 
 addEventListener ( "messagepane-loaded" , mailHops.setupEventListener , true ) ;
