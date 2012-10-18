@@ -18,6 +18,7 @@
 	  <tabs>
 	    <tab label="Options"/>
 	    <tab label="Hosting"/>
+	    <tab label="My Location"/>
 	  </tabs>
 	  <tabpanels>
 	    <tabpanel>	    
@@ -61,6 +62,17 @@
 				<textbox id="mailhop.api_url" value="http://api.mailhops.com" disabled="true"/>
 				<label class="text-link" onclick="TestConnection();" value="Test Connection" /> <label class="text-link" onclick="ResetConnection();" value="Reset Connection" />
 	  		</groupbox>
+	    </tabpanel>
+	    
+	    <tabpanel>
+	    	<groupbox>
+				<caption label="My Location"/>	
+				<description>
+					Your location is cached to reduce the number of lookups by one.
+				</description>				
+				<label id="mailhop.client_location" class="act" value="Not Set" />
+				<label id="mailhop.refresh_location" class="text-link act" onclick="ResetLocation(this);" value="Refresh your location" />
+			</groupbox>
 	    </tabpanel>
 	    
 		</tabpanels>	

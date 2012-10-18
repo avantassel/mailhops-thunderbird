@@ -5,3 +5,5 @@
 #mailhopsBox menuitem .menu-iconic-icon { width: 16px; height: 11px; }
 
 #mailhopsBox .auth-item { display: none; background-repeat: no-repeat; padding-left: 18px; }
+
+#mhTabs .act { padding-left: 20px; background-repeat: no-repeat; outline : none;}
