@@ -68,6 +68,12 @@ var mailHopPreferences =
 		document.getElementById("mailhop.use_private").checked = false;
 	
 	this.api_url.value = pref.getCharPref("mail.mailHops.api_url",'http://api.mailhops.com');
+	
+	document.getElementById("mailhop.client_location_whois").addEventListener("click", function () { 
+			   		if(this.hasAttribute('data-ip'))
+			  			mailHops.launchWhoIs(this.getAttribute('data-ip'));  	
+		  			}			
+			  	, false);
 
   } ,
   savePreferences: function()
@@ -96,27 +102,54 @@ function ChangePrivate(item){
 }
 
 function ResetLocation(e){
+	
 	e.style.backgroundImage = 'url(chrome://mailhops/content/images/loader.gif)';
+	
+	//clear the location
 	document.getElementById("mailhop.client_location").value='Getting your location...';
+	document.getElementById("mailhop.client_location_ip").value = '';
+	document.getElementById("mailhop.client_location_host").value = '';
+	document.getElementById("mailhop.client_location_whois").value = '';
+	document.getElementById("mailhop.client_location_whois").setAttribute('data-ip','');
+	
 	mailHops.setClientLocation();
-	if(pref.getCharPref("mail.mailHops.client_location", '') != ''){
-		var response = JSON.parse(pref.getCharPref("mail.mailHops.client_location", ''));
-		var location = '';
-		if(response.route[0].city)
-			location+=response.route[0].city;
-		if(response.route[0].state)
-			location+=', '+response.route[0].state;
-		if(response.route[0].countryName)
-			location+=' ( '+response.route[0].countryName+' )';
-		//set location   			
-		document.getElementById("mailhop.client_location").value=location;
-		//set country flag
-
-		if(response.route[0].countryCode)
-		   	document.getElementById("mailhop.client_location").style.backgroundImage='url(chrome://mailhops/content/images/flags/'+response.route[0].countryCode.toLowerCase()+'.png)';
-	}	
-	e.style.backgroundImage='';
+	//give the above process a few seconds
+	setTimeout(function(){
+	
+		if(pref.getCharPref("mail.mailHops.client_location", '') != ''){
+			var response = JSON.parse(pref.getCharPref("mail.mailHops.client_location", ''));
+			var location = '';
+			if(response.route[0].city)
+				location+=response.route[0].city;
+			if(response.route[0].state)
+				location+=', '+response.route[0].state;
+			if(response.route[0].countryName)
+				location+=' ( '+response.route[0].countryName+' )';
+			else if(response.route[0].countryCode)
+				location+=' ( '+response.route[0].countryCode+' )';
+				
+			//set location   			
+			document.getElementById("mailhop.client_location").value=location;
+			
+			//set ip
+			document.getElementById("mailhop.client_location_ip").value='IP: '+response.route[0].ip;
+			
+			//set host
+			if(response.route[0].host)
+				document.getElementById("mailhop.client_location_host").value='Host: '+response.route[0].host;
+			
+			document.getElementById("mailhop.client_location_whois").value = 'whois';
+			document.getElementById("mailhop.client_location_whois").setAttribute('data-ip', response.route[0].ip);
+			
+			//set country flag
+			if(response.route[0].countryCode)
+			   	document.getElementById("mailhop.client_location").style.backgroundImage='url(chrome://mailhops/content/images/flags/'+response.route[0].countryCode.toLowerCase()+'.png)';
+		}	
+		e.style.backgroundImage='';
+	
+	}, 1000);
 }
+
 
 function TestConnection(){
 	var xmlhttp = new XMLHttpRequest();

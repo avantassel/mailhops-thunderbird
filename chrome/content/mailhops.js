@@ -19,7 +19,7 @@ var mailHops =
   mailhopsDataPaneDNSBL:	null,
   isLoaded:     			false,
   options:					{'map':'goog','unit':'mi','api_url':'http://api.mailhops.com'},
-  appVersion:				'MailHops Thunderbird 0.8',
+  appVersion:				'MailHops Thunderbird 0.8.2',
   client_location:			null
 }
 
@@ -46,6 +46,21 @@ mailHops.startLoading = function()
   			mailHops.launchSpamHausURL( this.getAttribute('data-ip'));
   	}
   , false);  
+ 
+ document.getElementById("mailhopsDataPanePrefsLink").addEventListener("click", function () { 
+		window.openDialog("chrome://mailhops/content/preferences.xul","mailHopsPreferences",null,null);
+  	}
+  , false);
+  
+  document.getElementById("mailhopsDataPaneRefreshLink").addEventListener("click", function () { 
+		mailHops.refreshCache();
+  	}
+  , false);
+  
+  mailHops.mapLink.addEventListener("click", function () { 
+		mailHops.launchMap(this);
+  	}
+  , false);
 };
 
 mailHops.loadPref = function()
@@ -109,7 +124,7 @@ mailHops.StreamListener =
   {
     mailHops.headers = Components.classes["@mozilla.org/messenger/mimeheaders;1"].createInstance(Components.interfaces.nsIMimeHeaders);
     mailHops.headers.initialize(this.content, this.content.length);
-    mailHops.dispRoute();
+    mailHops.getRoute();
   }
 };
 
@@ -135,7 +150,7 @@ mailHops.loadHeaderData = function()
   msgService.CopyMessage(msgURI, mailHops.StreamListener, false, null, msgWindow, {});
 };
 
-mailHops.dispRoute = function()
+mailHops.getRoute = function()
 {
   //IP regex
 var regexIp=/(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)\.(1\d{0,2}|2(?:[0-4]\d{0,1}|[6789]|5[0-5]?)?|[3-9]\d?|0)(\/(?:[012]\d?|3[012]?|[456789])){0,1}$/; 
@@ -432,7 +447,7 @@ mailHops.authExplainDNSBL_server = function(result){
 	}
 };
 
-mailHops.displayResult = function ( header_route, response ){
+mailHops.displayResult = function ( header_route, response, meta, lookup_url ){
   var displayText='';
   var distanceText='';
   var image='chrome://mailhops/content/images/local.png';
@@ -692,12 +707,17 @@ mailHops.lookupRoute = function(header_route){
  //import nativeJSON 
  var nativeJSON = Components.classes["@mozilla.org/dom/json;1"].createInstance(Components.interfaces.nsIJSON);
  
+ var lookupURL=mailHops.options.api_url+'/v1/lookup/?pb&app='+mailHops.appVersion+'&r='+String(header_route);
+ 
+ if(mailHops.options.client_location != '')
+ 	lookupURL+='&c=0';
+ 	
  //check for cache
  var cached_results=mailHops.getResults();
 
  if(cached_results){
  	 cached_results = JSON.parse(cached_results);
-	 mailHops.displayResult(header_route,cached_results.response);
+	 mailHops.displayResult(header_route, cached_results.response, cached_results.meta, lookupURL);
 	 return;
  }
   
@@ -705,16 +725,18 @@ mailHops.lookupRoute = function(header_route){
  var xmlhttp = new XMLHttpRequest(); 
  var getClient = (mailHops.options.client_location != '')?'0':'1';
 		 	
- xmlhttp.open("GET", mailHops.options.api_url+'/v1/lookup/?tb&app='+mailHops.appVersion+'&c='+getClient+'&r='+String(header_route),true);
+ xmlhttp.open("GET", lookupURL, true);
  xmlhttp.onreadystatechange=function() {
   if (xmlhttp.readyState==4) {
   try{
   	   var data = JSON.parse(xmlhttp.responseText);
 	   if(data && data.meta.code==200){
+	   		var d = new Date();
+	   		data.meta.cached = d.toISOString();
 	   		//save the result
 	   		mailHops.saveResults(JSON.stringify(data));
 	   		//display the result
-	   		mailHops.displayResult(header_route,data.response,data.meta, lookupURL);
+	   		mailHops.displayResult(header_route, data.response, data.meta, lookupURL);
 	   } else {
 	    	//display the error
 	   		mailHops.displayError(data);
@@ -750,17 +772,17 @@ mailHops.launchSpamHausURL = function(ip){
 	messenger.launchExternalURL('http://www.spamhaus.org/query/bl?ip='+ip);
 };
 
-mailHops.launchMap = function(e,item){
+mailHops.launchMap = function(item){
 	var route =''; 
-	if(mailHops.mapLink.hasAttribute("data-route"))
-		route=mailHops.mapLink.getAttribute("data-route");
+	if(item.hasAttribute("data-route"))
+		route=item.getAttribute("data-route");
 	
 	if(route != '')	{
 		var lookupURL=mailHops.options.api_url+'/v1/map/?tb&app='+mailHops.appVersion+'&m='+mailHops.options.map+'&u='+mailHops.options.unit+'&r='+String(route);
 		 if(mailHops.options.show_weather)
 		 	lookupURL+='&w=1';		 
 		 	
-		window.openDialog("chrome://mailhops/content/mailhopsMap.xul","MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=742,height=385', {src: lookupURL});
+		window.openDialog("chrome://mailhops/content/mailhopsMap.xul","MailHops",'toolbar=no,location=no,directories=no,menubar=yes,scrollbars=yes,close=yes,width=742,height=385,resizable=yes', {src: lookupURL});
 	}
 };
 
@@ -791,6 +813,11 @@ mailHops.getResults = function(){
 		return false;
 		
 	return msgHdr.getStringProperty( "MH-Route" );
+};
+
+mailHops.refreshCache = function(){
+	mailHops.saveResults('');	
+	mailHops.getRoute();
 };
 
 addEventListener ( "messagepane-loaded" , mailHops.setupEventListener , true ) ;

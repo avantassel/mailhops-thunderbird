@@ -18,9 +18,13 @@
        				<menupopup id="mailhopsDataPaneDetails">						
 					</menupopup>
 				</button>	
-				 
-				<button id="mailhopsMapLink" oncommand="mailHops.launchMap(event, this);" class="msgHeaderView-button msgHeaderView-flat-button" label="map" tooltiptext="Click to view the travel map of this message.">
-					
+				
+    			<button type="menu" class="msgHeaderView-button msgHeaderView-flat-button" label="view" tooltiptext="MailHops Options">
+					<menupopup id="mailhopsDataPaneView">	
+						<menuitem id="mailhopsMapLink" class="menuitem-iconic" image="chrome://mailhops/content/images/map.png" label="map"></menuitem>					
+						<menuitem id="mailhopsDataPaneRefreshLink" class="menuitem-iconic" image="chrome://mailhops/content/images/refresh.png" label="refresh"></menuitem>
+						<menuitem id="mailhopsDataPanePrefsLink" class="menuitem-iconic" image="chrome://mailhops/content/images/options.png" label="options"></menuitem>
+					</menupopup>
     			</button>
     			
 				<label id="mailhopsDataPaneMailer" class="auth-item" value="" tooltiptext="Mailer"></label>
