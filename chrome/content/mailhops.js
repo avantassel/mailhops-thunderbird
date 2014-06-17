@@ -663,7 +663,7 @@ mailHops.getCharPref = function ( strName , strDefault )
 
   try
   {
-    value = pref.getCharPref ( strName ) ;
+    value = Components.classes["@mozilla.org/preferences-service;1"].getService ( Components.interfaces.nsIPrefBranch ).getCharPref ( strName ) ;
   }
   catch ( exception )
   {
@@ -709,7 +709,7 @@ mailHops.lookupRoute = function(header_route){
  //import nativeJSON
  var nativeJSON = Components.classes["@mozilla.org/dom/json;1"].createInstance(Components.interfaces.nsIJSON);
 
- var lookupURL=mailHops.options.api_url+'/v1/lookup/?pb&app='+mailHops.appVersion+'&r='+String(header_route);
+ var lookupURL=mailHops.options.api_url+'/v1/lookup/?tb&app='+mailHops.appVersion+'&r='+String(header_route);
 
  if(mailHops.options.client_location != '')
  	lookupURL+='&c=0';
@@ -731,7 +731,8 @@ mailHops.lookupRoute = function(header_route){
  xmlhttp.onreadystatechange=function() {
   if (xmlhttp.readyState==4) {
   try{
-  	   var data = JSON.parse(xmlhttp.responseText);
+     var data = JSON.parse(xmlhttp.responseText);
+
 	   if(data && data.meta.code==200){
 	   		var d = new Date();
 	   		data.meta.cached = d.toISOString();
