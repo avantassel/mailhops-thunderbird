@@ -1,3 +1,5 @@
+This plugin has moved, [https://github.com/avantassel/mailhops-plugin](https://github.com/avantassel/mailhops-plugin)
+
 # MailHops ![MailHops](chrome/content/images/mailhops32.png) Thunderbird Plugin
 
 1. Edit files
